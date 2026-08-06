@@ -13,7 +13,7 @@ The **College Complaint Management System** provides a transparent, centralized 
 ## ✨ Key Features
 
 ### 👨‍🎓 Student Portal
-- **Secure Authentication**: Student registration with USN (University Seat Number) validation and JWT-based authentication.
+- **Secure Authentication**: Student registration with USN (University Seat Number or SSN) validation and JWT-based authentication.
 - **File New Complaint**: Interactive modal with pre-defined department suggestion buttons (Infrastructure, Faculty, Library, Hostel, Others) and custom title support.
 - **Status Dashboard**: At-a-glance statistic cards for Total, Pending, In Progress, and Completed complaints.
 - **Filter & Search**: Quick filter buttons (All, Pending, In Progress, Completed) with pill-style tab controls.
