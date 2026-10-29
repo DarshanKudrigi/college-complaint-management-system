@@ -1,6 +1,6 @@
 # 🎓 College Complaint Management System
 
-A full-stack DBMS Mini Project designed to streamline campus issue reporting, tracking, and departmental resolution. Built using **React (Vite)**, **Tailwind CSS**, **Node.js / Express**, and **MySQL**.
+A full-stack DBMS Mini Project designed to streamline campus issue reporting, tracking, and departmental resolution. Built using **React (Vite)**, **Tailwind CSS**, **Node.js / Express**, and **Neon PostgreSQL**.
 
 
 
@@ -40,7 +40,7 @@ The **College Complaint Management System** provides a transparent, centralized 
 | **Styling** | Tailwind CSS, Lucide Icons | Responsive utility-first CSS & modern UI icon library |
 | **Routing** | React Router v6 | Client-side routing and protected routes |
 | **Backend API** | Node.js, Express.js | RESTful API server with modular controllers & routes |
-| **Database** | MySQL 8.0 (`mysql2`) | Relational database with foreign key constraints & cascades |
+| **Database** | Neon PostgreSQL (`pg`) | Hosted relational database with foreign key constraints |
 | **Authentication** | JWT & bcryptjs | Token-based auth and secure password hashing |
 
 ---
@@ -109,7 +109,7 @@ erDiagram
 arun-DB-Master/
 ├── backend/
 │   ├── config/
-│   │   └── db.js             # MySQL connection pool configuration
+│   │   └── db.js             # Neon PostgreSQL connection pool configuration
 │   ├── constants/
 │   │   └── categories.js     # Department & category constants
 │   ├── controllers/
@@ -123,8 +123,8 @@ arun-DB-Master/
 │   │   ├── auth.js           # Auth endpoint routes
 │   │   └── complaints.js     # Student complaint routes
 │   ├── .env.example          # Sample backend environment file
-│   ├── init-db.js            # Automated MySQL database initialization script
-│   ├── schema.sql            # MySQL DDL & DML seed script
+│   ├── init-db.js            # Automated PostgreSQL database initialization script
+│   ├── schema.sql            # PostgreSQL DDL & DML seed script
 │   └── server.js             # Express application entry point
 ├── frontend/
 │   ├── src/
@@ -161,7 +161,7 @@ arun-DB-Master/
 Make sure you have installed:
 - **Node.js** (v18.0.0 or higher)
 - **npm** (v9.0.0 or higher)
-- **MySQL Server** (v8.0 or higher)
+- A **Neon PostgreSQL** project and connection string
 
 ---
 
@@ -192,16 +192,12 @@ Create environment configuration files for both backend and frontend.
 # Windows Command Prompt / PowerShell
 copy backend\.env.example backend\.env
 ```
-Fill in your local MySQL database credentials inside `backend/.env`:
+Copy the example and fill in the Neon connection string and a private JWT secret:
 ```env
 PORT=8000
 CLIENT_ORIGIN=http://localhost:5173
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=complaint_db
-JWT_SECRET=your_jwt_secret_key_123
+DATABASE_URL=your_neon_connection_string
+JWT_SECRET=your_long_random_jwt_secret
 ```
 
 #### Frontend Configuration (`frontend/.env.local`):
@@ -215,16 +211,9 @@ VITE_API_URL=http://localhost:8000/api
 
 ---
 
-### 3. MySQL Database Setup
+### 3. Neon PostgreSQL Database Setup
 
-Execute the schema DDL script using MySQL CLI or the provided Node.js script:
-
-#### Option A: Using MySQL CLI
-```bash
-mysql -u root -p < backend/schema.sql
-```
-
-#### Option B: Using Backend Auto-Init Script
+Initialize the tables and seed the department/admin records:
 ```bash
 npm --prefix backend run init-db
 ```
@@ -249,6 +238,22 @@ npm --prefix frontend run dev
 ```
 
 Open `http://localhost:5173` in your browser to view the application.
+
+### Docker
+
+After setting `DATABASE_URL` and `JWT_SECRET` in `backend/.env`, build and start both services:
+
+```bash
+docker compose up --build
+```
+
+The frontend is available at `http://localhost:5173` and the backend API at
+`http://localhost:8000`. The backend initializes the Neon schema on startup.
+Stop the services with:
+
+```bash
+docker compose down
+```
 
 ---
 
@@ -298,6 +303,5 @@ Seed data includes pre-configured **Department Administrator** accounts for test
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
------------
 
 <p center>Made for Complaint managment system</p>
