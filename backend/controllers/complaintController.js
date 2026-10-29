@@ -66,7 +66,7 @@ export async function createComplaint(req, res) {
     }
 
     const [result] = await pool.execute(
-      "INSERT INTO complaint (title, description, issue_type, student_id, department_id) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO complaint (title, description, issue_type, student_id, department_id) VALUES (?, ?, ?, ?, ?) RETURNING complaint_id AS id",
       [title, description, issueType || null, studentId, parsedDepartmentId]
     );
 

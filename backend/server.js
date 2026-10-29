@@ -15,10 +15,14 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174"]
+    origin: allowedOrigins
   })
 );
 app.use(express.json());
@@ -34,9 +38,9 @@ app.use("/api/admin", adminRoutes);
 async function start() {
   try {
     await testDbConnection();
-    console.log("MySQL connected");
+    console.log("PostgreSQL connected");
   } catch (error) {
-    console.error("MySQL connection failed:", error.message);
+    console.error("PostgreSQL connection failed:", error.message);
   }
 
   app.listen(PORT, () => {

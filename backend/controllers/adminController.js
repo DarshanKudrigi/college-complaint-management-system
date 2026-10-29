@@ -98,7 +98,7 @@ export async function updateComplaintStatus(req, res) {
     const remarksText = remarks && remarks.trim() ? remarks.trim() : `Status changed to ${displayStatus}`;
 
     const [result] = await pool.execute(
-      "INSERT INTO complaint_status (status, remarks, updated_by, complaint_id) VALUES (?, ?, ?, ?)",
+      "INSERT INTO complaint_status (status, remarks, updated_by, complaint_id) VALUES (?, ?, ?, ?) RETURNING status_id",
       [displayStatus, remarksText, req.user.id, complaintId]
     );
 
