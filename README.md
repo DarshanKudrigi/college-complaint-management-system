@@ -298,6 +298,6 @@ Seed data includes pre-configured **Department Administrator** accounts for test
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
----
+-----------
 
 <p center>Made for Complaint managment system</p>
