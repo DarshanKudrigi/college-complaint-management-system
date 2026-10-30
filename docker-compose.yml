@@ -1,5 +1,15 @@
 services:
+  db-init:
+    image: ${DOCKERHUB_USERNAME:-local}/college-complaint-backend:latest
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    command: npm run init-db
+    restart: "no"
+
   backend:
+    image: ${DOCKERHUB_USERNAME:-local}/college-complaint-backend:latest
     build:
       context: ./backend
     env_file:
@@ -10,8 +20,12 @@ services:
       CLIENT_ORIGIN: ""
     expose:
       - "8000"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
 
   frontend:
+    image: ${DOCKERHUB_USERNAME:-local}/college-complaint-frontend:latest
     build:
       context: ./frontend
       args:

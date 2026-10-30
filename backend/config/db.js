@@ -22,7 +22,7 @@ databaseUrl.searchParams.delete("sslmode");
 
 const pool = new Pool({
   connectionString: databaseUrl.toString(),
-  ssl: { rejectUnauthorized: false, servername: databaseHost },
+  ssl: { rejectUnauthorized: true, servername: databaseHost },
   max: 10,
 });
 

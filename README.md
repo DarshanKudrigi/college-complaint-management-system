@@ -47,7 +47,8 @@ The **College Complaint Management System** provides a transparent, centralized 
 
 ## 🗄️ Database Schema & Architecture
 
-The relational database `complaint_db_arun_master` consists of **5 interconnected tables**:
+The Neon PostgreSQL database consists of the department, administrator,
+student, complaint, and complaint-status tables used by the application.
 
 ```mermaid
 erDiagram
@@ -123,6 +124,7 @@ arun-DB-Master/
 │   │   ├── auth.js           # Auth endpoint routes
 │   │   └── complaints.js     # Student complaint routes
 │   ├── .env.example          # Sample backend environment file
+│   ├── Dockerfile             # Backend production image
 │   ├── init-db.js            # Automated PostgreSQL database initialization script
 │   ├── schema.sql            # PostgreSQL DDL & DML seed script
 │   └── server.js             # Express application entry point
@@ -147,8 +149,11 @@ arun-DB-Master/
 │   │   ├── index.css         # Tailwind base styles
 │   │   └── main.jsx          # React app DOM root
 │   ├── index.html            # Vite HTML template
+│   ├── Dockerfile            # Frontend production image
+│   └── nginx.conf            # Frontend and API reverse proxy
 │   ├── tailwind.config.js    # Tailwind design tokens & themes
 │   └── vite.config.js        # Vite bundler configuration
+├── docker-compose.yml         # Local and EC2 service orchestration
 ├── package.json              # Monorepo root scripts (concurrently)
 └── README.md                 # Project documentation
 ```
@@ -218,15 +223,17 @@ VITE_API_URL=http://localhost:8000/api
 
 ### 3. Neon PostgreSQL Database Setup
 
-Initialize the tables and seed the department/admin records. This command is
-safe to run again because the schema uses idempotent PostgreSQL statements:
+Initialize the tables and default administrator accounts. This command is safe
+to run again: it uses idempotent PostgreSQL statements and preserves existing
+tables and data:
 
 ```bash
 npm --prefix backend run init-db
 ```
 
-The backend also runs this initialization automatically when started through
-Docker.
+The backend does not initialize the database during normal startup. In Docker,
+the separate `db-init` one-shot service runs before the backend and must
+complete successfully.
 
 ---
 
@@ -249,7 +256,7 @@ npm --prefix frontend run dev
 
 Open `http://localhost:5173` in your browser to view the application.
 
-### 5. Running with Docker (local)
+### 5. Running with Docker
 
 After setting `DATABASE_URL` and `JWT_SECRET` in `backend/.env`, run:
 
@@ -257,14 +264,14 @@ After setting `DATABASE_URL` and `JWT_SECRET` in `backend/.env`, run:
 docker compose up --build
 ```
 
-The local Docker services are exposed at:
+The Compose stack is exposed locally at:
 
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:8000`
-- Backend health endpoint: `http://localhost:8000/`
+- Frontend and API proxy: `http://localhost`
+- Backend health endpoint through Nginx: `http://localhost/`
 
-The backend container initializes the Neon schema and then starts Express.
-Check both containers with:
+The `db-init` service initializes the Neon schema, then the backend starts
+Express only after a successful database connection. The backend port is
+internal-only. Check all containers with:
 
 ```bash
 docker compose ps
@@ -277,35 +284,24 @@ Stop the services with:
 docker compose down
 ```
 
-If only the frontend appears to run, inspect the backend logs. A backend
-startup failure is usually caused by an invalid/missing `DATABASE_URL`, a
-temporary Neon/network connection issue, or Docker Desktop's Linux engine not
-running. Restart after correcting the environment:
+## 🔑 Administrator Setup
 
-```bash
-docker compose down
-docker compose up --build
-```
+The database includes these development/test administrator accounts:
 
----
-
-## 🔑 Default Login Credentials
-
-The development seed creates pre-configured **Department Administrator**
-accounts. All currently use the development password `password123`:
-
-| Role / Department | Email | Default Password |
+| Department | Email | Password |
 | :--- | :--- | :--- |
-| **Infrastructure Admin** | `infrastructure@college.edu` | `password123` |
-| **Faculty Admin** | `faculty@college.edu` | `password123` |
-| **Library Admin** | `library@college.edu` | `password123` |
-| **Hostel Admin** | `hostel@college.edu` | `password123` |
-| **Others Admin** | `others@college.edu` | `password123` |
+| Infrastructure | `infrastructure@college.edu` | `password123` |
+| Faculty | `faculty@college.edu` | `password123` |
+| Library | `library@college.edu` | `password123` |
+| Hostel | `hostel@college.edu` | `password123` |
+| Others | `others@college.edu` | `password123` |
 
-> ⚠️ **Security warning:** These credentials are public and must be changed or
-> removed before deployment. Do not expose this seed data on a public
-> installation. Students can register a new account on the `/register` page
-> using a valid USN format (e.g., `4NI24IS040`).
+These are the requested development defaults. They are stored as bcrypt
+hashes, not plaintext passwords. Change or remove these accounts before
+exposing the application publicly.
+
+Students can register at `/register` using a valid USN format such as
+`4NI24IS000`.
 
 ---
 
@@ -315,19 +311,20 @@ accounts. All currently use the development password `password123`:
   ever shared or exposed. Update only the local ignored `backend/.env` file.
 - Use a long, random `JWT_SECRET` and keep it private. Changing it invalidates
   existing JWT sessions.
-- The default admin password is for development/testing only. Provision unique
-  administrator passwords before production use.
-- Local Docker uses HTTP on ports `5173` and `8000`. For any non-local
-  deployment, put the application behind an HTTPS reverse proxy and use HTTPS
-  for the frontend and API origin.
+- The default admin accounts are for development/testing only. Change their
+  passwords before production use.
+- Database initialization is separate from backend startup and is safe to
+  rerun; it does not drop tables or delete existing complaint, student, or
+  administrator records.
+- Local Docker serves the frontend and API proxy on `http://localhost`; the
+  backend port is internal-only. For any non-local deployment, put the
+  application behind HTTPS with a domain and trusted TLS certificates.
 - Environment files are excluded by [.gitignore](.gitignore), and Docker build
   contexts exclude secrets through `backend/.dockerignore` and
   `frontend/.dockerignore`.
 - The PostgreSQL client resolves Neon to IPv4 for Docker compatibility while
-  retaining the Neon hostname for TLS server-name handling. The current
-  connection configuration disables certificate rejection to support the
-  development environment; production deployments should provide Neon CA
-  trust and enable certificate verification.
+  retaining the Neon hostname for TLS server-name handling. Certificate
+  verification is enabled; the Node.js trusted CA store must trust Neon.
 - Review `docker compose logs backend` after startup and do not treat a running
   frontend container as proof that the API or database connection is healthy.
 
@@ -349,6 +346,11 @@ CLIENT_ORIGIN=
 DATABASE_URL=your_neon_connection_string
 JWT_SECRET=your_long_random_jwt_secret
 ```
+
+Create this file at `~/college-complaint-management-system/backend/.env` on
+the EC2 instance (or the matching directory where you clone the project).
+`CLIENT_ORIGIN=` is intentional: the browser uses the same Nginx origin as the
+API, so CORS is disabled. Direct cross-origin API access is not allowed.
 
 The production frontend is built with `VITE_API_URL=/api`. Browser requests
 therefore use the EC2 domain, and Nginx forwards `/api/` requests internally
@@ -375,6 +377,48 @@ curl -i http://localhost/api/auth/categories
 Only port 80 should be allowed in the EC2 security group for public HTTP
 traffic. For production HTTPS, place a TLS reverse proxy or load balancer in
 front of this stack and allow only the required HTTPS port.
+
+---
+
+### Docker Hub image deployment
+
+The Compose file supports both local builds and Docker Hub images. Set your
+Docker Hub username in the shell when building:
+
+```bash
+export DOCKERHUB_USERNAME=your-dockerhub-username
+docker login
+docker compose build
+docker compose push
+```
+
+Or build and tag explicitly:
+
+```bash
+docker build -t your-dockerhub-username/college-complaint-backend:latest ./backend
+docker build --build-arg VITE_API_URL=/api \
+  -t your-dockerhub-username/college-complaint-frontend:latest ./frontend
+docker push your-dockerhub-username/college-complaint-backend:latest
+docker push your-dockerhub-username/college-complaint-frontend:latest
+```
+
+On EC2, clone the repository so the Compose and Nginx files are available,
+create `backend/.env` at
+`~/college-complaint-management-system/backend/.env`, then run:
+
+```bash
+cd ~/college-complaint-management-system
+export DOCKERHUB_USERNAME=your-dockerhub-username
+docker login
+docker compose pull
+docker compose up -d
+docker compose ps
+docker compose logs -f
+```
+
+The backend image is not published to an EC2 host port. Only the frontend
+Nginx container publishes port 80. Do not expose port 8000 in the EC2 security
+group.
 
 ---
 

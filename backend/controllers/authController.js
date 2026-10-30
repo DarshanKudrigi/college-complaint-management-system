@@ -18,11 +18,7 @@ async function verifyPassword(plainPassword, storedPassword) {
     return false;
   }
 
-  if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$")) {
-    return bcrypt.compare(plainPassword, storedPassword);
-  }
-
-  return plainPassword === storedPassword;
+  return bcrypt.compare(plainPassword, storedPassword);
 }
 
 export async function registerStudent(req, res) {
