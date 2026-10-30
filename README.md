@@ -162,6 +162,7 @@ Make sure you have installed:
 - **Node.js** (v18.0.0 or higher)
 - **npm** (v9.0.0 or higher)
 - A **Neon PostgreSQL** project and connection string
+- **Docker Desktop** with the Linux engine running (Docker setup only)
 
 ---
 
@@ -200,6 +201,10 @@ DATABASE_URL=your_neon_connection_string
 JWT_SECRET=your_long_random_jwt_secret
 ```
 
+`backend/.env` is intentionally ignored by Git. Never commit `DATABASE_URL`,
+`JWT_SECRET`, or any other secret. The Neon connection string should include
+`sslmode=require` and must be obtained from the Neon dashboard.
+
 #### Frontend Configuration (`frontend/.env.local`):
 ```bash
 copy frontend\.env.example frontend\.env.local
@@ -213,10 +218,15 @@ VITE_API_URL=http://localhost:8000/api
 
 ### 3. Neon PostgreSQL Database Setup
 
-Initialize the tables and seed the department/admin records:
+Initialize the tables and seed the department/admin records. This command is
+safe to run again because the schema uses idempotent PostgreSQL statements:
+
 ```bash
 npm --prefix backend run init-db
 ```
+
+The backend also runs this initialization automatically when started through
+Docker.
 
 ---
 
@@ -239,27 +249,50 @@ npm --prefix frontend run dev
 
 Open `http://localhost:5173` in your browser to view the application.
 
-### Docker
+### 5. Running with Docker
 
-After setting `DATABASE_URL` and `JWT_SECRET` in `backend/.env`, build and start both services:
+After setting `DATABASE_URL` and `JWT_SECRET` in `backend/.env`, run:
 
 ```bash
 docker compose up --build
 ```
 
-The frontend is available at `http://localhost:5173` and the backend API at
-`http://localhost:8000`. The backend initializes the Neon schema on startup.
+The services are exposed at:
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000`
+- Backend health endpoint: `http://localhost:8000/`
+
+The backend container initializes the Neon schema and then starts Express.
+Check both containers with:
+
+```bash
+docker compose ps
+docker compose logs -f backend
+```
+
 Stop the services with:
 
 ```bash
 docker compose down
 ```
 
+If only the frontend appears to run, inspect the backend logs. A backend
+startup failure is usually caused by an invalid/missing `DATABASE_URL`, a
+temporary Neon/network connection issue, or Docker Desktop's Linux engine not
+running. Restart after correcting the environment:
+
+```bash
+docker compose down
+docker compose up --build
+```
+
 ---
 
 ## 🔑 Default Login Credentials
 
-Seed data includes pre-configured **Department Administrator** accounts for testing (Password for all admin accounts is `password123`):
+The development seed creates pre-configured **Department Administrator**
+accounts. All currently use the development password `password123`:
 
 | Role / Department | Email | Default Password |
 | :--- | :--- | :--- |
@@ -269,7 +302,34 @@ Seed data includes pre-configured **Department Administrator** accounts for test
 | **Hostel Admin** | `hostel@college.edu` | `password123` |
 | **Others Admin** | `others@college.edu` | `password123` |
 
-> 💡 **Note**: Students can register a new account on the `/register` page using a valid USN format (e.g., `4NI24IS040`).
+> ⚠️ **Security warning:** These credentials are public and must be changed or
+> removed before deployment. Do not expose this seed data on a public
+> installation. Students can register a new account on the `/register` page
+> using a valid USN format (e.g., `4NI24IS040`).
+
+---
+
+## 🔐 Security and Deployment Notes
+
+- Rotate the Neon database password immediately if the connection string is
+  ever shared or exposed. Update only the local ignored `backend/.env` file.
+- Use a long, random `JWT_SECRET` and keep it private. Changing it invalidates
+  existing JWT sessions.
+- The default admin password is for development/testing only. Provision unique
+  administrator passwords before production use.
+- Local Docker uses HTTP on ports `5173` and `8000`. For any non-local
+  deployment, put the application behind an HTTPS reverse proxy and use HTTPS
+  for the frontend and API origin.
+- Environment files are excluded by [.gitignore](.gitignore), and Docker build
+  contexts exclude secrets through `backend/.dockerignore` and
+  `frontend/.dockerignore`.
+- The PostgreSQL client resolves Neon to IPv4 for Docker compatibility while
+  retaining the Neon hostname for TLS server-name handling. The current
+  connection configuration disables certificate rejection to support the
+  development environment; production deployments should provide Neon CA
+  trust and enable certificate verification.
+- Review `docker compose logs backend` after startup and do not treat a running
+  frontend container as proof that the API or database connection is healthy.
 
 ---
 
