@@ -15,14 +15,14 @@ dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
-const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:5173")
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
 app.use(
   cors({
-    origin: allowedOrigins
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false
   })
 );
 app.use(express.json());

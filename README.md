@@ -249,7 +249,7 @@ npm --prefix frontend run dev
 
 Open `http://localhost:5173` in your browser to view the application.
 
-### 5. Running with Docker
+### 5. Running with Docker (local)
 
 After setting `DATABASE_URL` and `JWT_SECRET` in `backend/.env`, run:
 
@@ -257,7 +257,7 @@ After setting `DATABASE_URL` and `JWT_SECRET` in `backend/.env`, run:
 docker compose up --build
 ```
 
-The services are exposed at:
+The local Docker services are exposed at:
 
 - Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000`
@@ -330,6 +330,51 @@ accounts. All currently use the development password `password123`:
   trust and enable certificate verification.
 - Review `docker compose logs backend` after startup and do not treat a running
   frontend container as proof that the API or database connection is healthy.
+
+---
+
+## ☁️ AWS EC2 Production Deployment
+
+The production Compose configuration serves the frontend and reverse proxy on
+port 80. The backend is available only inside the Docker network and is not
+published to the EC2 host.
+
+### Production environment
+
+On the EC2 instance, create `backend/.env` from the example and set:
+
+```env
+PORT=8000
+CLIENT_ORIGIN=
+DATABASE_URL=your_neon_connection_string
+JWT_SECRET=your_long_random_jwt_secret
+```
+
+The production frontend is built with `VITE_API_URL=/api`. Browser requests
+therefore use the EC2 domain, and Nginx forwards `/api/` requests internally
+to `http://backend:8000/api/`. Do not set the production frontend API URL to
+`localhost`.
+
+### Production Compose commands
+
+```bash
+docker compose config
+docker compose build --no-cache
+docker compose up -d
+docker compose ps
+docker compose logs -f
+```
+
+Verify the deployment from the EC2 instance:
+
+```bash
+curl -I http://localhost
+curl -i http://localhost/api/auth/categories
+```
+
+Only port 80 should be allowed in the EC2 security group for public HTTP
+traffic. For production HTTPS, place a TLS reverse proxy or load balancer in
+front of this stack and allow only the required HTTPS port.
 
 ---
 
